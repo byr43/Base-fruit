@@ -1,108 +1,68 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import TreasuryABI from "./abis/Treasury.json";
 
-// Sabit elma ücreti
-const APPLE_PRICE_IN_ETH = "0.00006";
-const TREASURY_ADDRESS = "0x000000000000000000000000000000000000dead"; // değiştir
+const CONTRACT_ADDRESS = "0xcd4d24A1eE6744b0bf3a6df4b1A1963D05dF8df4";
+const APPLE_PRICE = "0.00006";
 
-// Örnek ağaç/elma koordinatları
-const applePositions = [
-  { id: 1, x: 20, y: 30 },
-  { id: 2, x: 50, y: 40 },
-  { id: 3, x: 70, y: 20 },
-];
-
-export default function App({ provider }: { provider: any }) {
-  const [collected, setCollected] = useState(0);
+function App() {
+  const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
+  const [collected, setCollected] = useState<number>(0);
+  const [collectedIds, setCollectedIds] = useState<number[]>([]);
   const [status, setStatus] = useState("");
-  const [collectedApples, setCollectedApples] = useState<number[]>([]);
 
-  const collectApple = async (appleId: number) => {
-    if (collectedApples.includes(appleId)) {
-      setStatus("Already collected this apple!");
-      return;
+  useEffect(() => {
+    if ((window as any).ethereum) {
+      setProvider(new ethers.providers.Web3Provider((window as any).ethereum));
     }
+  }, []);
 
-    if (!provider) {
-      setStatus("Wallet not available. Open inside Farcaster or connect wallet.");
-      return;
-    }
-
-    setStatus(`This will cost ${APPLE_PRICE_IN_ETH} ETH + gas fees. Confirm in your wallet.`);
+  async function collectApple(appleId: number) {
+    if (collectedIds.includes(appleId)) return;
+    if (!provider) return;
 
     try {
-      const ethersProvider = new ethers.providers.Web3Provider(provider);
-      const signer = ethersProvider.getSigner();
-
-      const value = ethers.utils.parseEther(APPLE_PRICE_IN_ETH);
-
-      // Gas estimate
-      let gasLimit;
-      try {
-        gasLimit = await signer.estimateGas({
-          to: TREASURY_ADDRESS,
-          value
-        });
-        gasLimit = gasLimit.mul(110).div(100); // +10% tampon
-      } catch {
-        gasLimit = ethers.BigNumber.from(21000);
-      }
-
-      const feeData = await ethersProvider.getFeeData();
-
-      const tx = {
-        to: TREASURY_ADDRESS,
-        value,
-        gasLimit,
-        maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-        gasPrice: feeData.gasPrice ?? undefined,
-      };
-
-      setStatus("Requesting wallet approval...");
-      const sent = await signer.sendTransaction(tx);
-
-      await sent.wait(1); // 1 confirmation
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, TreasuryABI, signer);
+      const tx = await contract.collect({ value: ethers.utils.parseEther(APPLE_PRICE) });
+      await tx.wait(1);
 
       setCollected(c => c + 1);
-      setCollectedApples(prev => [...prev, appleId]);
-      setStatus(`🍎 Apple collected! Tx: ${sent.hash}`);
-    } catch (err: any) {
+      setCollectedIds(prev => [...prev, appleId]);
+      setStatus("Collected");
+    } catch (err) {
       console.error(err);
-      if (err?.code === 4001) {
-        setStatus("Transaction rejected by user.");
-      } else if (err?.message) {
-        setStatus("Transaction failed: " + err.message);
-      } else {
-        setStatus("Transaction failed.");
-      }
     }
-  };
+  }
+
+  const apples = [
+    { id: 1, x: 20, y: 30 },
+    { id: 2, x: 50, y: 50 },
+    { id: 3, x: 70, y: 20 },
+  ];
 
   return (
-    <div style={{ position: "relative", width: "800px", height: "600px", background: "url('/tree.png') no-repeat center/contain" }}>
-      <h1>Base Fruit 🍎</h1>
-      <p>Apples collected: {collected}</p>
-      <p>Status: {status}</p>
-
-      {applePositions.map(apple => (
-        !collectedApples.includes(apple.id) && (
-          <img
-            key={apple.id}
-            src="/apple.png" // elma görseli public klasörde olmalı
-            alt="apple"
-            style={{
-              position: "absolute",
-              width: 40,
-              height: 40,
-              cursor: "pointer",
-              top: ${apple.y}%,
-              left: ${apple.x}%
-            }}
-            onClick={() => collectApple(apple.id)}
-          />
-        )
+    <div style={{ position: "relative", width: "100vw", height: "100vh", backgroundColor: "#d0f0c0" }}>
+      {apples.map(apple => (
+        <div
+          key={apple.id}
+          style={{
+            position: "absolute",
+            width: 40,
+            height: 40,
+            backgroundColor: "red",
+            borderRadius: "50%",
+            top: apple.y + "%",
+            left: apple.x + "%",
+            cursor: "pointer",
+          }}
+          onClick={() => collectApple(apple.id)}
+        />
       ))}
+      {status && <div style={{ position: "absolute", top: 20, left: 20, fontSize: 24 }}>{status}</div>}
+      <div style={{ position: "absolute", top: 60, left: 20 }}>Collected: {collected}</div>
     </div>
   );
 }
+
+export default App;
