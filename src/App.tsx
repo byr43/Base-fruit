@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import TreasuryABI from "./abis/Treasury.json";
 import { useAccount, useConnect, useSigner } from "wagmi";
@@ -16,12 +16,14 @@ function App() {
   const [apples, setApples] = useState<Apple[]>([]);
   const { connect } = useConnect({ connector: new InjectedConnector() });
   const { data: signer } = useSigner();
+  const { address } = useAccount();
 
   useEffect(() => {
+    // 5 elma rastgele konumda
     const newApples: Apple[] = Array.from({ length: 5 }, (_, i) => ({
       id: i,
       x: Math.random() * 80,
-      y: Math.random() * 80
+      y: Math.random() * 80,
     }));
     setApples(newApples);
   }, []);
@@ -59,15 +61,15 @@ function App() {
           onClick={() => collectApple(apple.id)}
           style={{
             position: "absolute",
-            width: "40px",
-            height: "40px",
+            width: 40,
+            height: 40,
             borderRadius: "50%",
             backgroundColor: "red",
             top: ${apple.y}%,
             left: ${apple.x}%,
-            cursor: "pointer"
+            cursor: "pointer",
           }}
-        ></div>
+        />
       ))}
 
       {/* Basit ağaç çizimi */}
@@ -76,24 +78,24 @@ function App() {
           position: "absolute",
           bottom: 0,
           left: "50%",
-          width: "100px",
-          height: "200px",
-          marginLeft: "-50px",
-          backgroundColor: "#8b5a2b"
+          width: 100,
+          height: 200,
+          marginLeft: -50,
+          backgroundColor: "#8b5a2b",
         }}
-      ></div>
+      />
       <div
         style={{
           position: "absolute",
-          bottom: "150px",
+          bottom: 150,
           left: "50%",
-          width: "200px",
-          height: "100px",
-          marginLeft: "-100px",
+          width: 200,
+          height: 100,
+          marginLeft: -100,
           borderRadius: "50%",
-          backgroundColor: "green"
+          backgroundColor: "green",
         }}
-      ></div>
+      />
     </div>
   );
 }
