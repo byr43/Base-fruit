@@ -1,88 +1,108 @@
-import { useEffect, useState } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
+import { useState } from "react";
+import { ethers } from "ethers";
 
-const TREASURY_ADDRESS = "0x000000000000000000000000000000000000dead";
+// Sabit elma ücreti
+const APPLE_PRICE_IN_ETH = "0.00006";
+const TREASURY_ADDRESS = "0x000000000000000000000000000000000000dead"; // değiştir
 
-export default function App() {
-  const [provider, setProvider] = useState<any>(null);
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [status, setStatus] = useState("Loading...");
+// Örnek ağaç/elma koordinatları
+const applePositions = [
+  { id: 1, x: 20, y: 30 },
+  { id: 2, x: 50, y: 40 },
+  { id: 3, x: 70, y: 20 },
+];
+
+export default function App({ provider }: { provider: any }) {
   const [collected, setCollected] = useState(0);
+  const [status, setStatus] = useState("");
+  const [collectedApples, setCollectedApples] = useState<number[]>([]);
 
-  useEffect(() => {
-    const init = async () => {
-      try { await sdk.actions.ready(); } catch {}
-      const p = await sdk.wallet.getEthereumProvider?.();
-      if (p) setProvider(p);
-      setStatus("Ready! Connect your wallet to start.");
-    };
-    init();
-  }, []);
+  const collectApple = async (appleId: number) => {
+    if (collectedApples.includes(appleId)) {
+      setStatus("Already collected this apple!");
+      return;
+    }
 
-  async function connectWallet() {
     if (!provider) {
-      setStatus("No wallet found in browser.");
-      return;
-    }
-    try {
-      await provider.request({ method: "eth_requestAccounts" });
-      setWalletConnected(true);
-      setStatus("Wallet connected ✅");
-    } catch {
-      setStatus("Wallet connection failed ❌");
-    }
-  }
-
-  async function collectApple() {
-    if (!walletConnected) {
-      setStatus("Please connect your wallet first.");
+      setStatus("Wallet not available. Open inside Farcaster or connect wallet.");
       return;
     }
 
-    setStatus("Requesting wallet approval...");
+    setStatus(`This will cost ${APPLE_PRICE_IN_ETH} ETH + gas fees. Confirm in your wallet.`);
+
     try {
-      const accounts = await provider.request({ method: "eth_requestAccounts" });
-      const from = accounts[0];
-      const tx = { from, to: TREASURY_ADDRESS, value: "0x0" };
-      await provider.request({ method: "eth_sendTransaction", params: [tx] });
+      const ethersProvider = new ethers.providers.Web3Provider(provider);
+      const signer = ethersProvider.getSigner();
+
+      const value = ethers.utils.parseEther(APPLE_PRICE_IN_ETH);
+
+      // Gas estimate
+      let gasLimit;
+      try {
+        gasLimit = await signer.estimateGas({
+          to: TREASURY_ADDRESS,
+          value
+        });
+        gasLimit = gasLimit.mul(110).div(100); // +10% tampon
+      } catch {
+        gasLimit = ethers.BigNumber.from(21000);
+      }
+
+      const feeData = await ethersProvider.getFeeData();
+
+      const tx = {
+        to: TREASURY_ADDRESS,
+        value,
+        gasLimit,
+        maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+        gasPrice: feeData.gasPrice ?? undefined,
+      };
+
+      setStatus("Requesting wallet approval...");
+      const sent = await signer.sendTransaction(tx);
+
+      await sent.wait(1); // 1 confirmation
 
       setCollected(c => c + 1);
-      setStatus("🍎 Apple collected!");
-    } catch {
-      setStatus("❌ Transaction rejected or failed.");
+      setCollectedApples(prev => [...prev, appleId]);
+      setStatus(`🍎 Apple collected! Tx: ${sent.hash}`);
+    } catch (err: any) {
+      console.error(err);
+      if (err?.code === 4001) {
+        setStatus("Transaction rejected by user.");
+      } else if (err?.message) {
+        setStatus("Transaction failed: " + err.message);
+      } else {
+        setStatus("Transaction failed.");
+      }
     }
-  }
+  };
 
   return (
-    <div style={{ textAlign: "center", marginTop: 20 }}>
-      <h1>🍏 Base Fruit</h1>
-      <p>Click anywhere on the tree to collect apples!</p>
+    <div style={{ position: "relative", width: "800px", height: "600px", background: "url('/tree.png') no-repeat center/contain" }}>
+      <h1>Base Fruit 🍎</h1>
+      <p>Apples collected: {collected}</p>
+      <p>Status: {status}</p>
 
-      {!walletConnected ? (
-        <button onClick={connectWallet}>Connect Wallet</button>
-      ) : (
-        <p>Wallet connected ✅</p>
-      )}
-
-      <div
-        style={{
-          position: "relative",
-          width: 300,
-          height: 400,
-          margin: "20px auto",
-          cursor: "pointer",
-        }}
-        onClick={collectApple}
-      >
-        <img
-          src="/images/tree.png"
-          alt="tree"
-          style={{ width: "100%", height: "100%" }}
-        />
-      </div>
-
-      <p>Collected: {collected}</p>
-      <p>{status}</p>
+      {applePositions.map(apple => (
+        !collectedApples.includes(apple.id) && (
+          <img
+            key={apple.id}
+            src="/apple.png" // elma görseli public klasörde olmalı
+            alt="apple"
+            style={{
+              position: "absolute",
+              width: 40,
+              height: 40,
+              cursor: "pointer",
+              top: ${apple.y}%,
+              left: ${apple.x}%
+            }}
+            onClick={() => collectApple(apple.id)}
+          />
+        )
+      ))}
     </div>
   );
 }
