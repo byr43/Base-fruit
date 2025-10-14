@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+
 import { ethers } from "ethers";
 import TreasuryABI from "./abis/Treasury.json";
 
@@ -66,3 +66,4 @@ function App() {
 }
 
 export default App;
+
