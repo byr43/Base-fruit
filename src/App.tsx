@@ -1,69 +1,103 @@
-
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import TreasuryABI from "./abis/Treasury.json";
+import { useAccount, useConnect, useSigner } from "wagmi";
+import { InjectedConnector } from "wagmi/connectors/injected";
 
 const CONTRACT_ADDRESS = "0xcd4d24A1eE6744b0bf3a6df4b1A1963D05dF8df4";
-const APPLE_PRICE = "0.00006";
+
+interface Apple {
+  id: number;
+  x: number;
+  y: number;
+}
 
 function App() {
-  const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
-  const [collected, setCollected] = useState<number>(0);
-  const [collectedIds, setCollectedIds] = useState<number[]>([]);
-  const [status, setStatus] = useState("");
+  const [apples, setApples] = useState<Apple[]>([]);
+  const { connect } = useConnect({ connector: new InjectedConnector() });
+  const { data: signer } = useSigner();
+  const { address } = useAccount();
 
   useEffect(() => {
-    if ((window as any).ethereum) {
-      setProvider(new ethers.providers.Web3Provider((window as any).ethereum));
-    }
+    // 5 elma rastgele konumda
+    const newApples: Apple[] = Array.from({ length: 5 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 80,
+      y: Math.random() * 80,
+    }));
+    setApples(newApples);
   }, []);
 
-  async function collectApple(appleId: number) {
-    if (collectedIds.includes(appleId)) return;
-    if (!provider) return;
+  const collectApple = async (id: number) => {
+    if (!signer) {
+      alert("Connect your wallet first!");
+      return;
+    }
 
     try {
-      const signer = provider.getSigner();
       const contract = new ethers.Contract(CONTRACT_ADDRESS, TreasuryABI, signer);
-      const tx = await contract.collect({ value: ethers.utils.parseEther(APPLE_PRICE) });
-      await tx.wait(1);
-
-      setCollected(c => c + 1);
-      setCollectedIds(prev => [...prev, appleId]);
-      setStatus("Collected");
+      const tx = await contract.collect({ value: ethers.utils.parseEther("0.00006") });
+      await tx.wait();
+      setApples((prev) => prev.filter((a) => a.id !== id));
+      console.log("Collected!");
     } catch (err) {
       console.error(err);
+      alert("Transaction failed!");
     }
-  }
-
-  const apples = [
-    { id: 1, x: 20, y: 30 },
-    { id: 2, x: 50, y: 50 },
-    { id: 3, x: 70, y: 20 },
-  ];
+  };
 
   return (
-    <div style={{ position: "relative", width: "100vw", height: "100vh", backgroundColor: "#d0f0c0" }}>
-      {apples.map(apple => (
+    <div style={{ position: "relative", width: "100vw", height: "100vh", background: "#a2d149" }}>
+      <button
+        onClick={() => connect()}
+        style={{ position: "absolute", top: 10, left: 10, padding: "10px 20px", zIndex: 10 }}
+      >
+        Connect Wallet
+      </button>
+
+      {apples.map((apple) => (
         <div
           key={apple.id}
+          onClick={() => collectApple(apple.id)}
           style={{
             position: "absolute",
             width: 40,
             height: 40,
-            backgroundColor: "red",
             borderRadius: "50%",
-            top: apple.y + "%",
-            left: apple.x + "%",
+            backgroundColor: "red",
+            top: ${apple.y}%,
+            left: ${apple.x}%,
             cursor: "pointer",
           }}
-          onClick={() => collectApple(apple.id)}
         />
       ))}
-      {status && <div style={{ position: "absolute", top: 20, left: 20, fontSize: 24 }}>{status}</div>}
-      <div style={{ position: "absolute", top: 60, left: 20 }}>Collected: {collected}</div>
+
+      {/* Basit ağaç çizimi */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: "50%",
+          width: 100,
+          height: 200,
+          marginLeft: -50,
+          backgroundColor: "#8b5a2b",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: 150,
+          left: "50%",
+          width: 200,
+          height: 100,
+          marginLeft: -100,
+          borderRadius: "50%",
+          backgroundColor: "green",
+        }}
+      />
     </div>
   );
 }
 
 export default App;
-
