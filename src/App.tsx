@@ -16,10 +16,8 @@ function App() {
   const [apples, setApples] = useState<Apple[]>([]);
   const { connect } = useConnect({ connector: new InjectedConnector() });
   const { data: signer } = useSigner();
-  const { address } = useAccount();
 
   useEffect(() => {
-    // 5 elma rastgele konumda
     const newApples: Apple[] = Array.from({ length: 5 }, (_, i) => ({
       id: i,
       x: Math.random() * 80,
@@ -61,15 +59,15 @@ function App() {
           onClick={() => collectApple(apple.id)}
           style={{
             position: "absolute",
-            width: 40,
-            height: 40,
+            width: "40px",
+            height: "40px",
             borderRadius: "50%",
             backgroundColor: "red",
             top: ${apple.y}%,
             left: ${apple.x}%,
             cursor: "pointer",
           }}
-        />
+        ></div>
       ))}
 
       {/* Basit ağaç çizimi */}
@@ -78,24 +76,24 @@ function App() {
           position: "absolute",
           bottom: 0,
           left: "50%",
-          width: 100,
-          height: 200,
-          marginLeft: -50,
+          width: "100px",
+          height: "200px",
+          marginLeft: "-50px",
           backgroundColor: "#8b5a2b",
         }}
-      />
+      ></div>
       <div
         style={{
           position: "absolute",
-          bottom: 150,
+          bottom: "150px",
           left: "50%",
-          width: 200,
-          height: 100,
-          marginLeft: -100,
+          width: "200px",
+          height: "100px",
+          marginLeft: "-100px",
           borderRadius: "50%",
           backgroundColor: "green",
         }}
-      />
+      ></div>
     </div>
   );
 }
