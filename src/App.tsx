@@ -21,7 +21,7 @@ function App() {
     const newApples: Apple[] = Array.from({ length: 5 }, (_, i) => ({
       id: i,
       x: Math.random() * 80,
-      y: Math.random() * 80,
+      y: Math.random() * 80
     }));
     setApples(newApples);
   }, []);
@@ -65,7 +65,7 @@ function App() {
             backgroundColor: "red",
             top: ${apple.y}%,
             left: ${apple.x}%,
-            cursor: "pointer",
+            cursor: "pointer"
           }}
         ></div>
       ))}
@@ -79,7 +79,7 @@ function App() {
           width: "100px",
           height: "200px",
           marginLeft: "-50px",
-          backgroundColor: "#8b5a2b",
+          backgroundColor: "#8b5a2b"
         }}
       ></div>
       <div
@@ -91,7 +91,7 @@ function App() {
           height: "100px",
           marginLeft: "-100px",
           borderRadius: "50%",
-          backgroundColor: "green",
+          backgroundColor: "green"
         }}
       ></div>
     </div>
